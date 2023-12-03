@@ -27,19 +27,19 @@ if [ ! -d "$backup_directory" ]; then
     # Create the backup folder
     mkdir "$backup_directory"
     if [ $? -eq 0 ]; then
-        echo "\nBackup folder created successfully!"
+        echo -e "\nBackup folder created successfully!"
     else
-        echo "\nFailed to create the backup folder."
+        echo -e "\nFailed to create the backup folder."
     fi
 else
-    echo "\nBackup folder already exists."
+    echo -e "\nBackup folder already exists."
 fi
 
 
 # Array of file or whatsapp_directory names to be excluded from backup
 exclude=("Backups" "Databases" "Media")
 
-echo "\nPreparing A Clean Backup!"
+echo -e "\nPreparing A Clean Backup!"
 
 # Iterate through all files and directories in the given whatsapp_directory
 for file in "$whatsapp_directory"/.* "$whatsapp_directory"/*; do
@@ -65,7 +65,7 @@ for file in "$whatsapp_directory"/.* "$whatsapp_directory"/*; do
     fi
 done
 
-echo "Cleaned Up!\n"
+echo -e "Cleaned Up!\n"
 
 
 # Filename for the archive
@@ -77,12 +77,12 @@ archive_count=1
 # Function to check if an archive file already exists
 archive_exists() {
   if [ -e "$archive_filename.tar.gz" ]; then
-    echo "Filename exists ($archive_filename)"
-    echo "Updating Filename\n"
+    echo -e "Filename exists ($archive_filename)"
+    echo -e "Updating Filename\n"
     return 0
   else
-    echo "Generated Filename ($archive_filename)"
-    echo "Archiving....\n"
+    echo -e "Generated Filename ($archive_filename)"
+    echo -e "Archiving....\n"
     return 1
   fi
 }
@@ -104,16 +104,16 @@ archive_filename="$archive_filename.tar.gz"
 tar -zcvf "$backup_directory/$archive_filename" -C "$(dirname "$whatsapp_directory")" "$(basename "$whatsapp_directory")/"*
 
 # Output the archived file name
-echo "\nArchiving Completed!"
-echo "Backup Filename: $archive_filename\n"
+echo -e "\nArchiving Completed!"
+echo -e "Backup Filename: $archive_filename\n"
 
 }
 
 # Function to perform task B
 restore() {
-echo
+echo -e
 if [ ! -d "$backup_directory" ]; then
-    echo "\nBackup Folder Not Found!"
+    echo -e "\nBackup Folder Not Found!"
     exit 0
 else
    # Desired file extension
@@ -127,27 +127,27 @@ else
     
     # Check if the 'Media' folder exists
 if [ ! -d "$whatsappx_directory" ]; then
-  echo "Creating 'Media' folder..."
+  echo -e "Creating 'Media' folder..."
   mkdir -p "$whatsappx_directory"
 fi
 
 # Check if the 'com.whatsApp' folder exists
 if [ ! -d "$whatsappx_directory" ]; then
-  echo "Creating 'com.whatsApp' folder..."
+  echo -e "Creating 'com.whatsApp' folder..."
   mkdir -p "$whatsappx_directory"
 fi
 
-echo "Restoring...."
+echo -e "Restoring...."
 
 
     # Check if a valid file was found
     if [ -n "$latest_file" ]; then
-    echo "\nLatest Backup File: $latest_file"
+    echo -e "\nLatest Backup File: $latest_file"
     # Extract the latest file to the WhatsApp directory
     tar -xzf "$latest_file" -C "$whatsappx_directory"
-    echo "Latest Backup Fille Extracted! "
+    echo -e "Latest Backup Fille Extracted! "
     else
-    echo "\nNo Backup Files found in $backup_directory"
+    echo -e "\nNo Backup Files found in $backup_directory"
     fi
     
 fi
@@ -167,18 +167,18 @@ upload() {
     
     # Check if a valid file was found
     if [ -n "$latest_file" ]; then
-    echo "\nLatest Backup File: $latest_file"
+    echo -e "\nLatest Backup File: $latest_file"
     else
-    echo "\nNo Backup Files found in $backup_directory"
+    echo -e "\nNo Backup Files found in $backup_directory"
     fi
-    echo "Uploading...."
+    echo -e "Uploading...."
     bash <(curl -s https://devuploads.com/upload.sh) -f $backup_directory/$latest_file -k $key
     
 }
 
 # Function to display the menu and prompt for input
 prompt() {
-echo
+echo -e
     echo -e "${CYAN} ===== WhatsApp Tool ==== ${RESET}\n"
     echo -e "${GREEN} 1.Backup ${RESET}"
     echo -e "${YELLOW} 2.Restore ${RESET}"
@@ -198,15 +198,18 @@ echo
             upload
             ;;
         4)
-            echo "Exiting..."
+            echo -e "Exiting..."
             exit 0
             ;;
         *)
-            echo "Invalid choice. Please try again."
-            echo
+            echo -e "Invalid choice. Please try again."
+            echo -e
             prompt
             ;;
     esac
 }
 
 prompt
+
+
+#nxtgencat
