@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Define color variables
+RED="\e[31m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+CYAN="\e[36m"
+RESET="\e[0m"
+
 # Path to the whatsapp_directory to be backed up
 whatsapp_directory="/storage/emulated/0/Android/media/com.whatsapp/WhatsApp"
 
@@ -100,6 +107,7 @@ echo "Backup Filename: $archive_filename\n"
 
 # Function to perform task B
 restore() {
+echo
 if [ ! -d "$backup_directory" ]; then
     echo "\nBackup Folder Not Found!"
     exit 0
@@ -112,6 +120,21 @@ else
 
     # Find the latest file with the specified extension
     latest_file=$(ls -1t *"$file_extension" 2>/dev/null | head -n 1)
+    
+    # Check if the 'sus' folder exists
+if [ ! -d "$whatsappx_directory" ]; then
+  echo "Creating 'Media' folder..."
+  mkdir -p "$whatsappx_directory"
+fi
+
+# Check if the 'com.whatsApp' folder exists
+if [ ! -d "$whatsappx_directory" ]; then
+  echo "Creating 'com.whatsApp' folder..."
+  mkdir -p "$whatsappx_directory"
+fi
+
+echo "Restoring...."
+
 
     # Check if a valid file was found
     if [ -n "$latest_file" ]; then
@@ -129,11 +152,12 @@ fi
 
 # Function to display the menu and prompt for input
 prompt() {
-    echo "Please choose an option:"
-    echo "1. Backup"
-    echo "2. Restore"
-    echo "3. Quit"
-    echo -n "Enter Choice: "
+echo
+    echo -e "${CYAN} ===== WhatsApp Tool ==== ${RESET}\n"
+    echo -e "${GREEN} 1.Backup ${RESET}"
+    echo -e "${YELLOW} 2.Restore ${RESET}"
+    echo -e "${RED} 3.Quit ${RESET}\n"
+    echo -n "${CYAN} Enter Choice:${RESET} "
     read -r choice
 
     case $choice in
