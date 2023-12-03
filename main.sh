@@ -4,6 +4,7 @@
 RED="\e[31m"
 GREEN="\e[32m"
 YELLOW="\e[33m"
+MAGENTA="\e[35m"
 CYAN="\e[36m"
 RESET="\e[0m"
 
@@ -181,7 +182,7 @@ echo
     echo -e "${CYAN} ===== WhatsApp Tool ==== ${RESET}\n"
     echo -e "${GREEN} 1.Backup ${RESET}"
     echo -e "${YELLOW} 2.Restore ${RESET}"
-    echo -e "${YELLOW} 3.Upload ${RESET}"
+    echo -e "${MAGENTA} 3.Upload ${RESET}"
     echo -e "${RED} 4.Quit ${RESET}\n"
     echo -n "${CYAN} Enter Choice:${RESET} "
     read -r choice
