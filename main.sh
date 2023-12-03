@@ -184,8 +184,8 @@ echo
     echo -e "${YELLOW} 2.Restore ${RESET}"
     echo -e "${MAGENTA} 3.Upload ${RESET}"
     echo -e "${RED} 4.Quit ${RESET}\n"
-    echo -n "${CYAN} Enter Choice:${RESET} "
-    read -r choice
+    echo -ne "${CYAN} Enter Choice:${RESET} "
+    read choice
 
     case $choice in
         1)
