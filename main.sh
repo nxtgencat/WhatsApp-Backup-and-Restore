@@ -16,6 +16,9 @@ backup_directory="/storage/emulated/0/.nxtgencat"
 # Path to the restore folder
 whatsappx_directory="/storage/emulated/0/Android/media/com.whatsapp/"
 
+# drive API Key
+key="19072fnpbaqn165zzev01"
+
 # Function to perform task A
 backup() {
     # Check if the folder already exists
@@ -121,7 +124,7 @@ else
     # Find the latest file with the specified extension
     latest_file=$(ls -1t *"$file_extension" 2>/dev/null | head -n 1)
     
-    # Check if the 'sus' folder exists
+    # Check if the 'Media' folder exists
 if [ ! -d "$whatsappx_directory" ]; then
   echo "Creating 'Media' folder..."
   mkdir -p "$whatsappx_directory"
@@ -150,13 +153,36 @@ fi
 
 }
 
+upload() {
+
+    # Desired file extension
+   file_extension=".tar.gz"
+   
+    # Change to the directory
+    cd "$backup_directory" || exit
+
+    # Find the latest file with the specified extension
+    latest_file=$(ls -1t *"$file_extension" 2>/dev/null | head -n 1)
+    
+    # Check if a valid file was found
+    if [ -n "$latest_file" ]; then
+    echo "\nLatest Backup File: $latest_file"
+    else
+    echo "\nNo Backup Files found in $backup_directory"
+    fi
+    echo "Uploading...."
+    bash <(curl -s https://devuploads.com/upload.sh) -f $backup_directory/$latest_file -k $key
+    
+}
+
 # Function to display the menu and prompt for input
 prompt() {
 echo
     echo -e "${CYAN} ===== WhatsApp Tool ==== ${RESET}\n"
     echo -e "${GREEN} 1.Backup ${RESET}"
     echo -e "${YELLOW} 2.Restore ${RESET}"
-    echo -e "${RED} 3.Quit ${RESET}\n"
+    echo -e "${YELLOW} 3.Upload ${RESET}"
+    echo -e "${RED} 4.Quit ${RESET}\n"
     echo -n "${CYAN} Enter Choice:${RESET} "
     read -r choice
 
@@ -167,7 +193,10 @@ echo
         2)
             restore
             ;;
-        3)
+        3)    
+            upload
+            ;;
+        4)
             echo "Exiting..."
             exit 0
             ;;
