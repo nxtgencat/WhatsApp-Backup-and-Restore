@@ -1,330 +1,245 @@
 #!/bin/bash
 
-# Define color variables
-RED="\e[31m"
-GREEN="\e[32m"
-YELLOW="\e[33m"
-MAGENTA="\e[35m"
-CYAN="\e[36m"
-RESET="\e[0m"
-
-# Path to the whatsapp_directory to be backed up
-whatsapp_directory="/storage/emulated/0/Android/media/com.whatsapp/WhatsApp"
-
-# Path to the backup folder
+whatsapp_directory="/storage/emulated/0/Android/medias/com.whatsapp/WhatsApp"
 backup_directory="/storage/emulated/0/.nxtgencat"
 
-# Path to the restore folder
-whatsappx_directory="/storage/emulated/0/Android/media/com.whatsapp/"
+# Function to log messages with timestamps
+nxtgen_log() {
+    local log_message="$1"
+    local log_file="$backup_directory/nxtgen.log"
+    local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
 
+    echo "[$timestamp] $log_message" >> "$log_file"
+}
 
+# Function to clear the screen and display the menu
+clear_screen_and_menu() {
+    clear
+    echo
+    echo -e "\e[96mWhatsAppTool\e[0m"
+    echo "1. Backup"
+    echo "2. Restore"
+    echo "3. Cloud Backup"
+    echo "4. Exit"
+    echo
+}
 
-# Function to perform backup
+# Function to check if a directory exists and create it if not
+create_directory_if_not_exists() {
+    local directory_path="$1"
 
-backup() {
-
-    # Check if the folder already exists
-    if [ ! -d "$backup_directory" ]; then
-    # Create the backup folder
-    mkdir "$backup_directory"
-    if [ $? -eq 0 ]; then
-    echo -e "\nBackup folder created successfully!"
-    else
-    echo -e "\nFailed to create the backup folder."
+    if [ ! -d "$directory_path" ]; then
+        nxtgen_log "Creating directory: $directory_path"
+        mkdir -p "$directory_path"
     fi
-    else
-    echo -e "\nBackup folder already exists."
-    fi
+}
 
+# Function to remove files and folders except specified ones
+remove_files_except() {
+    local directory_path="$1"
+    local exceptions=("Databases" "Media" "Backups")
 
-    # Array of file or whatsapp_directory names to be excluded from backup
-    exclude=("Backups" "Databases" "Media")
-
-    echo -e "\nPreparing A Clean Backup!"
-
-    # Iterate through all files and directories in the given whatsapp_directory
-for file in "$whatsapp_directory"/.* "$whatsapp_directory"/*; do
-   if [[ -f "$file" || -d "$file" ]]; then
-    filename=$(basename "$file")
-
-    # Exclude special whatsapp_directory references '.' and '..'
-    if [[ "$filename" != "." && "$filename" != ".." ]]; then
-        matched=false
-         for item in "${exclude[@]}"; do
-    # Check if the file or whatsapp_directory should be excluded
-                if [[ "$filename" == "$item" ]]; then
-                    matched=true
-                    break
-                fi
-            done
-
-            # If the file or whatsapp_directory is not in the exclude list, remove it
-            if ! $matched; then
-                rm -rf "$file"
-            fi
+    nxtgen_log "Removing files and folders in: $directory_path"
+    
+    for entry in "$directory_path"/* "$directory_path"/.*; do
+        # Check if the entry is not in the exceptions list
+        if [[ ! " ${exceptions[@]} " =~ " $(basename "$entry") " ]]; then
+            rm -r "$entry" 2>/dev/null
         fi
-     fi
-done
+    done
+}
 
-echo -e "Cleaned Up!\n"
+# Function to check if a directory is empty
+is_directory_empty() {
+    local directory_path="$1"
 
+    if [ "$(ls -A "$directory_path")" ]; then
+        return 1  # Directory is not empty
+    else
+        return 0  # Directory is empty
+    fi
+}
 
-# Filename for the archive
-archive_filename="whatsapp_archive"
+# Function to get the device model
+get_device_model() {
+    echo "$(getprop ro.product.model)"
+}
 
-# Variable to keep track of the archive number
-archive_count=1
+# Function to get the next available counter for a specific archive name
+get_next_counter() {
+    local backup_directory="$1"
+    local archive_name="$2"
+    local counter=0
 
-# Function to check if an archive file already exists
-archive_exists() {
-  if [ -e "$archive_filename.tar.gz" ]; then
-    echo -e "Filename exists ($archive_filename)"
-    echo -e "Updating Filename\n"
-    return 0
-  else
-    echo -e "Generated Filename ($archive_filename)"
-    echo -e "Archiving....\n"
+    while [ -e "$backup_directory/$archive_name$([ $counter -gt 0 ] && echo "_$counter").tar.gz" ]; do
+        counter=$((counter + 1))
+    done
+
+    echo "$counter"
+}
+
+# Function to backup all folders into a single archive with device model and counter
+backup_all_folders() {
+    local source_directory="$1"
+    local backup_directory="$2"
+    local device_model
+
+    device_model=$(get_device_model)
+    archive_name="${device_model}_backup"
+
+    counter=$(get_next_counter "$backup_directory" "$archive_name")
+
+    nxtgen_log "Backing up all folders in: $source_directory"
+
+    tar -czf "$backup_directory/$archive_name$([ $counter -gt 0 ] && echo "_$counter").tar.gz" -C "$source_directory/.." "$(basename "$source_directory")" || return 1
+
+    echo "$archive_name$([ $counter -gt 0 ] && echo "_$counter").tar.gz"
+}
+
+# Function to handle errors during archive creation or restoration
+handle_error() {
+    local error_message="$1"
+    nxtgen_log "Error: $error_message"
+    echo -e "\e[91mError: $error_message\e[0m"
     return 1
-  fi
 }
 
-# Check if an archive file already exists
-cd $backup_directory
-while archive_exists; do
-  archive_filename="whatsapp_archive$archive_count"
-  archive_count=$((archive_count+1))
-done
-
-# Change to the parent whatsapp_directory of the target whatsapp_directory
-cd "$(dirname "$whatsapp_directory")"
-
-# Add .tar.gz extension to the archive filename
-archive_filename="$archive_filename.tar.gz"
-
-# Create the .tar.gz archive of the contents without the parent whatsapp_directory
-tar -zcvf "$backup_directory/$archive_filename" -C "$(dirname "$whatsapp_directory")" "$(basename "$whatsapp_directory")/"*
-
-# Output the archived file name
-echo -e "\nArchiving Completed!"
-echo -e "Backup Filename: $archive_filename\n"
-
-}
-
-# Function to perform task B
-restore() {
-echo -e
-if [ ! -d "$backup_directory" ]; then
-    echo -e "\nBackup Folder Not Found!"
-    exit 0
-else
-   # Desired file extension
-   file_extension=".tar.gz"
-
-    # Change to the directory
-    cd "$backup_directory" || exit
-
-    # Find the latest file with the specified extension
-    latest_file=$(ls -1t *"$file_extension" 2>/dev/null | head -n 1)
+# Function for the backup option
+backup_option() {
+    create_directory_if_not_exists "$whatsapp_directory"
+    remove_files_except "$whatsapp_directory"
+    create_directory_if_not_exists "$backup_directory"
     
-    # Check if the 'Media' folder exists
-if [ ! -d "$whatsappx_directory" ]; then
-  echo -e "Creating 'Media' folder..."
-  mkdir -p "$whatsappx_directory"
-fi
-
-# Check if the 'com.whatsApp' folder exists
-if [ ! -d "$whatsappx_directory" ]; then
-  echo -e "Creating 'com.whatsApp' folder..."
-  mkdir -p "$whatsappx_directory"
-fi
-
-echo -e "Restoring...."
-
-
-    # Check if a valid file was found
-    if [ -n "$latest_file" ]; then
-    echo -e "\nLatest Backup File: $latest_file"
-    # Extract the latest file to the WhatsApp directory
-    tar -xzf "$latest_file" -C "$whatsappx_directory"
-    echo -e "Latest Backup Fille Extracted! "
+    if is_directory_empty "$whatsapp_directory"; then
+        nxtgen_log "WhatsApp directory is empty. No backup created."
+        echo -e "\e[93mWhatsApp directory is empty. No backup created.\e[0m"
     else
-    echo -e "\nNo Backup Files found in $backup_directory"
-    fi
-    
-fi
-
-}
-
-upload() {
-
-    # Desired file extension
-   file_extension=".tar.gz"
-   
-    # Change to the directory
-    cd "$backup_directory" || exit
-
-    # Find the latest file with the specified extension
-    latest_file=$(ls -1t *"$file_extension" 2>/dev/null | head -n 1)
-    
-    # Check if a valid file was found
-    if [ -n "$latest_file" ]; then
-    echo -e "\nLatest Backup File: $latest_file"
-    else
-    echo -e "\nNo Backup Files found in $backup_directory"
-    fi
-    echo -e "${CYAN} Uploading....${RESET}"
-    
-    
-# ............. Devupload ............ #
-url="https://devuploads.com/api/upload/server"
-
-# take user args -f for file path and -k for api key and -h for help
-
-file_path="$backup_directory/$latest_file"
-api_key="19072fnpbaqn165zzev01"
-sess_id=""
-server_url=""
-
-
-# if api key is not defined
-if [ -z "$sess_id" ]; then
-    res_status=400
-    while [ "$res_status" -ne 200 ]; do
-        # default value api_key if not entered by user
-        if [ ! -z "$api_key" ]; then
-            res_json=$(curl -s -X GET "$url?key=$api_key")
-            res_status=$(echo "$res_json" | grep -o '"status":[0-9]*' | awk -F ':' '{print $2}')
-            sess_id=$(echo "$res_json" | grep -o '"sess_id":"[^"]*"' | awk -F ':' '{print $2}' | tr -d '"')
-            server_url=$(echo $res_json | sed -n 's/.*"result":"\([^"]*\).*/\1/p')
-            if [ "$res_status" -eq 200 ]; then
-                break
-            else
-                printf "\e[31mYou API KEY $api_key is not valid\e[0m"
-                echo
-                api_key=''
-                continue
-            fi
+        local archive_name
+        archive_name=$(backup_all_folders "$whatsapp_directory" "$backup_directory")
+        
+        if [ $? -eq 0 ]; then
+            nxtgen_log "Backup completed successfully! Archive name: $archive_name"
+            echo -e "\e[92mBackup completed successfully! \nArchive name: $archive_name\e[0m"
         else
-            printf "\e[90mEnter api key: \e[0m"
+            handle_error "Failed to create backup archive"
         fi
-        read user_api_key
-        
-        # if user have not entered api key use default value
-        if [ -z "$user_api_key" ]; then
-            user_api_key="$api_key"
-        fi
-        
-        res_json=$(curl -s -X GET "$url?key=$user_api_key")
+    fi
+
+    # Return to the menu
+}
+
+# Function for the restore option
+restore_option() {
+    local latest_archive
+    local whatsapp_backup_directory="$backup_directory" # Change this if your backup directory structure is different
+
+    # Find the latest archive
+    latest_archive=$(find "$whatsapp_backup_directory" -type f -name '*.tar.gz' | sort -V | tail -n 1)
+
+    if [ -z "$latest_archive" ]; then
+        nxtgen_log "No backup archives found. Restore aborted."
+        echo -e "\e[93mNo backup archives found. Restore aborted.\e[0m"
+        return
+    fi
+
+    nxtgen_log "Restoring from the latest backup archive: $latest_archive"
+
+    # Extract contents of the root folder from the latest archive to WhatsApp directory
+    tar -xzf "$latest_archive" -C "$whatsapp_directory" --strip-components=1
+
+    if [ $? -eq 0 ]; then
+        nxtgen_log "Restore completed successfully! Archive name: $(basename "$latest_archive")"
+        echo -e "\e[92mRestore completed successfully! \nArchive name: $(basename "$latest_archive")\e[0m"
+    else
+        handle_error "Failed to extract contents from the backup archive"
+    fi
+
+    # Return to the menu
+}
+
+# Function for the cloud backup option
+cloud_backup_option() {
+
+    url="https://devuploads.com/api/upload/server"
+    api_key="19072fnpbaqn165zzev01"
+    server_url=""
+    sess_id=""
+    file_path=""
+
+    # Fetch session ID and server URL
+    if [ -z "$sess_id" ]; then
+        api_key="${api_key:-your_constant_api_key}"
+        res_json=$(curl -s -X GET "$url?key=$api_key")
         res_status=$(echo "$res_json" | grep -o '"status":[0-9]*' | awk -F ':' '{print $2}')
         sess_id=$(echo "$res_json" | grep -o '"sess_id":"[^"]*"' | awk -F ':' '{print $2}' | tr -d '"')
         server_url=$(echo $res_json | sed -n 's/.*"result":"\([^"]*\).*/\1/p')
+
         if [ "$res_status" -ne 200 ]; then
-            printf "\e[31mYour API KEY $user_api_key is not valid\e[0m"
-            echo
+            nxtgen_log "Invalid API KEY $api_key"
+            echo "Invalid API KEY $api_key"
+            exit 1
         fi
-    done
-fi
+    fi
 
-# check if path is a file
-if [ ! -f "$file_path" ]; then
-    # enter file path until it's valid and show error if not valid
-    while [ ! -f "$file_path" ]; do
-        if [ ! -z "$file_path" ]; then
-            printf "\e[31mFile $file_path not found\e[0m"
-            echo
-        fi
-        printf "\e[90mEnter file path: \e[0m"
-        read file_path
-        file_path=$(realpath "$file_path") # abs path
-    done
-fi
+    # Find the latest archive in the backup directory
+    latest_archive=$(find "$backup_directory" -type f -name '*.tar.gz' | sort -V | tail -n 1)
 
-# url="https://du3.devuploads.com/cgi-bin/upload.cgi"
-url="$server_url"
-#echo "Uploading file $file_path to $url"
-echo
-res_file_name=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1 | awk '{print "u"$0".json"}')
+    if [ -z "$latest_archive" ]; then
+        nxtgen_log "No backup archives found. Cloud Backup aborted."
+        echo -e "\e[93mNo backup archives found. Cloud Backup aborted.\e[0m"
+        exit 1
+    fi
 
-# make request using curl use -o flag with file name to save file
-curl -X POST -o "$res_file_name" \
--F "sess_id=$sess_id" \
--F "utype=reg" \
--F "file=@$file_path" \
-"$url"
+    file_path="$latest_archive"
 
-# get file content with grep -o '"file_code":"[^"]*"' | awk -F ':' '{print $2}' | tr -d '"'
-file_code=$(cat "$res_file_name" | grep -o '"file_code":"[^"]*"' | awk -F ':' '{print $2}' | tr -d '"')
+    # Validate file path
+    if [ ! -f "$file_path" ]; then
+    nxtgen_log "File $file_path not found"
+        echo "File $file_path not found"
+        exit 1
+    fi
 
-# remove the file
-rm "$res_file_name"
+    # Print checks
+    nxtgen_log "✓ Api key is valid."
+    nxtgen_log "✓ Tokens fetched."
+    nxtgen_log "✓ File path is valid."
 
-# print file code
-prefix_url="https://devuploads.com/"
-echo
-printf "\e[32m File Successfully Uploaded \n URL : $prefix_url$file_code\e[0m"
-echo
+    # Upload file
+    url="${server_url:-$url}"
+    echo -e "\e[92mUploading file ....\e[0m\n"
 
-# set it up the main.sh as a command devupload
-# chmod +x main.sh
-# sudo mv main.sh /usr/bin/devupload
+    res_file_name="u$(head -c 32 /dev/urandom | base64 | tr -d '+/=')json"
+    curl -X POST -o "$res_file_name" -F "sess_id=$sess_id" -F "utype=reg" -F "file=@$file_path" "$url"
 
-# usage
+    # Get file code
+    file_code=$(grep -o '"file_code":"[^"]*"' "$res_file_name" | awk -F ':' '{print $2}' | tr -d '"')
+    rm "$res_file_name"
 
-
-# Define the path and filename
-
-file="nxtgencat.log"
-log="$prefix_url$file_code"
-# Check if path exists, create if necessary
-
-if [ ! -d "$backup_directory" ]; then
-    mkdir -p "$backup_directory"
-fi
-
-# Check if file exists, append or create if necessary
-if [ ! -f "$file" ]; then
-    touch "$file"
-fi
-
-# Append text with timestamp to file
-echo "$(date '+%Y-%m-%d %H:%M:%S') filename : $latest_file URL : $log ">> "$backup_directory/$file"
-    echo -e "\n${CYAN} Generatd Log! \n Path : $backup_directory/$file ${RESET}\n"
+    # Print file code
+    prefix_url="https://devuploads.com/"
+    nxtgen_log "$prefix_url$file_code"
+    echo
+    echo -e "\e[32m$prefix_url$file_code\e[0m\n\n"
 }
 
-# Function to display the menu and prompt for input
-prompt() {
-echo
-    echo -e "${CYAN} ===== WhatsApp Tool ==== ${RESET}\n"
-    echo -e "${GREEN} 1.Backup ${RESET}"
-    echo -e "${YELLOW} 2.Restore ${RESET}"
-    echo -e "${MAGENTA} 3.Upload ${RESET}"
-    echo -e "${RED} 4.Quit ${RESET}\n"
-    echo -ne "${CYAN} Enter Choice:${RESET} "
-    read choice
+
+# WhatsAppTool Menu
+clear_screen_and_menu
+
+while true; do
+    echo
+    read -p "Enter your choice (1-4): " choice
 
     case $choice in
-        1)
-            backup
-            ;;
-        2)
-            restore
-            ;;
-        3)    
-            upload
-            ;;
-        4)
-            echo -e "Exiting..."
-            exit 0
-            ;;
-        *)
-            echo -e "Invalid choice. Please try again."
-            echo -e
-            prompt
-            ;;
+        1)  clear_screen_and_menu
+            backup_option ;;
+        2)  clear_screen_and_menu
+            restore_option ;;
+        3)  clear_screen_and_menu
+            cloud_backup_option ;;
+        4)  echo -e "\e[92m\nExiting WhatsAppTool. Goodbye!\e[0m\n"
+            exit ;;
+        *)  nxtgen_log "Invalid choice. Please enter a number between 1 and 4."
+            echo -e "\e[91mInvalid choice. Please enter a number between 1 and 4.\e[0m" ;;
     esac
-}
-
-prompt
-
-
-#nxtgencat
+done
