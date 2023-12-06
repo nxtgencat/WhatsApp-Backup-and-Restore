@@ -104,6 +104,21 @@ handle_error() {
     return 1
 }
 
+# Function to get the file size in megabytes and kilobytes without using bc
+get_file_size() {
+    local file_path="$1"
+    local size_in_bytes=$(stat -c %s "$file_path")
+
+    if [ "$size_in_bytes" -ge $((1024 * 1024)) ]; then
+        local size_in_megabytes=$((size_in_bytes / 1024 / 1024))
+        local decimal_part=$((size_in_bytes * 100 / 1024 / 1024 % 100))
+        echo "$size_in_megabytes.$(printf "%02d" $decimal_part) MB"
+    else
+        local size_in_kilobytes=$((size_in_bytes / 1024))
+        echo "$size_in_kilobytes KB"
+    fi
+}
+
 # Function for the backup option
 backup_option() {
     create_directory_if_not_exists "$whatsapp_directory"
@@ -118,8 +133,10 @@ backup_option() {
         archive_name=$(backup_all_folders "$whatsapp_directory" "$backup_directory")
         
         if [ $? -eq 0 ]; then
-            nxtgen_log "Backup completed successfully! Archive name: $archive_name"
-            echo -e "\e[92mBackup completed successfully! \nArchive name: $archive_name\e[0m"
+            archive_path="$backup_directory/$archive_name"
+            size=$(get_file_size "$archive_path")
+            nxtgen_log "Backup completed successfully! Archive name: $archive_name, Size: $size"
+            echo -e "\e[92mBackup completed successfully! \nArchive name: $archive_name, Size: $size\e[0m"
         else
             handle_error "Failed to create backup archive"
         fi
@@ -142,14 +159,17 @@ restore_option() {
         return
     fi
 
-    nxtgen_log "Restoring from the latest backup archive: $latest_archive"
+    archive_path="$latest_archive"
+    archive_size=$(get_file_size "$archive_path")
+
+    nxtgen_log "Restoring from the latest backup archive: $latest_archive, Size: $archive_size"
 
     # Extract contents of the root folder from the latest archive to WhatsApp directory
     tar -xzf "$latest_archive" -C "$whatsapp_directory" --strip-components=1
 
     if [ $? -eq 0 ]; then
-        nxtgen_log "Restore completed successfully! Archive name: $(basename "$latest_archive")"
-        echo -e "\e[92mRestore completed successfully! \nArchive name: $(basename "$latest_archive")\e[0m"
+        nxtgen_log "Restore completed successfully! Archive name: $(basename "$latest_archive"), Size: $archive_size"
+        echo -e "\e[92mRestore completed successfully! \nArchive name: $(basename "$latest_archive"), Size: $archive_size\e[0m"
     else
         handle_error "Failed to extract contents from the backup archive"
     fi
@@ -159,20 +179,19 @@ restore_option() {
 
 # Function for the cloud backup option
 cloud_backup_option() {
-
     url="https://devuploads.com/api/upload/server"
     api_key="19072fnpbaqn165zzev01"
     server_url=""
     sess_id=""
     file_path=""
-
+    echo -e "\e[92mConnecting to server....\e[0m"
     # Fetch session ID and server URL
     if [ -z "$sess_id" ]; then
         api_key="${api_key:-your_constant_api_key}"
         res_json=$(curl -s -X GET "$url?key=$api_key")
         res_status=$(echo "$res_json" | grep -o '"status":[0-9]*' | awk -F ':' '{print $2}')
         sess_id=$(echo "$res_json" | grep -o '"sess_id":"[^"]*"' | awk -F ':' '{print $2}' | tr -d '"')
-        server_url=$(echo $res_json | sed -n 's/.*"result":"\([^"]*\).*/\1/p')
+        server_url=$(echo "$res_json" | sed -n 's/.*"result":"\([^"]*\).*/\1/p')
 
         if [ "$res_status" -ne 200 ]; then
             nxtgen_log "Invalid API KEY $api_key"
@@ -190,38 +209,54 @@ cloud_backup_option() {
         exit 1
     fi
 
+    archive_name=$(basename "$latest_archive")  # Extracting archive name from the path
+    archive_path="$latest_archive"
+    archive_size=$(get_file_size "$archive_path")
     file_path="$latest_archive"
 
     # Validate file path
     if [ ! -f "$file_path" ]; then
-    nxtgen_log "File $file_path not found"
+        nxtgen_log "File $file_path not found"
         echo "File $file_path not found"
         exit 1
     fi
 
     # Print checks
-    nxtgen_log "✓ Api key is valid."
+    nxtgen_log "✓ API key is valid."
     nxtgen_log "✓ Tokens fetched."
     nxtgen_log "✓ File path is valid."
 
     # Upload file
     url="${server_url:-$url}"
-    echo -e "\e[92mUploading file ....\e[0m\n"
+    echo -e "\e[92mUploading file ....\e[0m"
+    echo -e "\e[92mArchive name: $archive_name, Size: $archive_size\e[0m\n"
 
     res_file_name="u$(head -c 32 /dev/urandom | base64 | tr -d '+/=')json"
-    curl -X POST -o "$res_file_name" -F "sess_id=$sess_id" -F "utype=reg" -F "file=@$file_path" "$url"
+    curl -X POST -o "$res_file_name" -F "sess_id=$sess_id" -F "utype=reg" -F "file=@$file_path" "$url" || {
+        nxtgen_log "Error uploading file."
+        echo "Error uploading file."
+        rm "$res_file_name"  # Clean up the temporary response file
+        exit 1
+    }
 
-    # Get file code
-    file_code=$(grep -o '"file_code":"[^"]*"' "$res_file_name" | awk -F ':' '{print $2}' | tr -d '"')
+    # Get file code using awk
+    file_code=$(awk -F'"' '/file_code/{print $4}' "$res_file_name")
     rm "$res_file_name"
-
-    # Print file code
+    
+    # Print file information for cloud backup
     prefix_url="https://devuploads.com/"
-    nxtgen_log "$prefix_url$file_code"
+    nxtgen_log "File uploaded successfully! \nFile code: $file_code \nLink : $prefix_url$file_code"
     echo
-    echo -e "\e[32m$prefix_url$file_code\e[0m\n\n"
-}
+    echo -e "\e[92mFile uploaded successfully! \nFile code: $file_code \nLink : $prefix_url$file_code\e[0m\n"
 
+    # If cloud backup completed successfully
+    if [ $? -eq 0 ]; then
+        nxtgen_log "Cloud Backup completed successfully! Archive name: $archive_name, Size: $archive_size"
+        echo -e "\e[92mCloud Backup completed successfully! \n\e[0m"
+    else
+        handle_error "Failed to create cloud backup"
+    fi
+}
 
 # WhatsAppTool Menu
 clear_screen_and_menu
