@@ -1,6 +1,6 @@
 #!/bin/bash
 
-whatsapp_directory="/storage/emulated/0/Android/medias/com.whatsapp/WhatsApp"
+whatsapp_directory="/storage/emulated/0/Android/media/com.whatsapp/WhatsApp"
 backup_directory="/storage/emulated/0/.nxtgencat"
 
 # Function to log messages with timestamps
