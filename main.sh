@@ -1,6 +1,6 @@
 #!/bin/bash
 
-whatsapp_directory="/storage/emulated/0/Android/media/com.whatsapp/WhatsApp"
+whatsapp_directory="/storage/emulated/0/Android/medias/com.whatsapp/WhatsApp"
 backup_directory="/storage/emulated/0/.nxtgencat"
 
 # Function to log messages with timestamps
@@ -184,6 +184,24 @@ restore_option() {
 
 # Function for the cloud backup option
 cloud_backup_option() {
+    clear_screen_and_menu
+
+    echo "Select Cloud Backup Server:"
+    echo "1. Devupload"
+    echo "2. Gofile"
+    echo
+
+    read -p "Enter your choice (1 or 2): " cloud_choice
+
+    case $cloud_choice in
+        1)  devupload_cloud_backup_option ;;
+        2)  gofile_cloud_backup_option ;;
+        *)  nxtgen_log "Invalid choice. Please enter 1 or 2."
+            echo -e "\e[91mInvalid choice. Please enter 1 or 2.\e[0m" ;;
+    esac
+}   
+
+devupload_cloud_backup_option() {
     url="https://devuploads.com/api/upload/server"
     api_key="19072fnpbaqn165zzev01"
     server_url=""
@@ -263,6 +281,66 @@ cloud_backup_option() {
     fi
 }
 
+gofile_cloud_backup_option() {
+    # Get the best server available
+    server_response=$(curl -s https://api.gofile.io/getServer)
+    server_status=$(echo "$server_response" | grep -o '"status":"[^"]*"' | awk -F ':' '{print $2}' | tr -d '"')
+    best_server=$(echo "$server_response" | grep -o '"server":"[^"]*"' | awk -F ':' '{print $2}' | tr -d '"')
+
+    if [ "$server_status" != "ok" ]; then
+        nxtgen_log "Failed to retrieve the best server."
+        echo "Failed to retrieve the best server."
+        exit 1
+    fi
+
+    echo -e "\e[92mConnecting to server $best_server....\e[0m"
+
+    # Find the latest archive in the backup directory
+    latest_archive=$(find "$backup_directory" -type f -name '*.tar.gz' | sort -V | tail -n 1)
+
+    if [ -z "$latest_archive" ]; then
+        nxtgen_log "No backup archives found. Cloud Backup aborted."
+        echo -e "\e[93mNo backup archives found. Cloud Backup aborted.\e[0m"
+        exit 1
+    fi
+
+    archive_name=$(basename "$latest_archive")  # Extracting archive name from the path
+    archive_path="$latest_archive"
+    archive_size=$(get_file_size "$archive_path")
+    file_path="$latest_archive"
+
+    # Validate file path
+    if [ ! -f "$file_path" ]; then
+        nxtgen_log "File $file_path not found"
+        echo "File $file_path not found"
+        exit 1
+    fi
+
+    # Print checks
+    nxtgen_log "✓ Best server: $best_server"
+    nxtgen_log "✓ File path is valid."
+
+    # Upload file to the best server
+    upload_response=$(curl -s -F "file=@$file_path" "https://$best_server.gofile.io/uploadFile")
+
+    # Extract relevant information from the upload response
+
+    file_code=$(echo "$upload_response" | grep -o '"code":"[^"]*"' | awk -F ':' '{print $2}' | tr -d '"')
+
+    # Print file information for cloud backup
+    nxtgen_log "File uploaded successfully! \nFile code: $file_code \nLink : https://gofile.io/d/$file_code"
+    echo
+    echo -e "\e[92mFile uploaded successfully! \nFile code: $file_code \nLink : https://gofile.io/d/$file_code\e[0m\n"
+
+    # If cloud backup completed successfully
+    if [ $? -eq 0 ]; then
+        nxtgen_log "Cloud Backup completed successfully! Archive name: $archive_name, Size: $archive_size"
+        echo -e "\e[92mCloud Backup completed successfully! \n\e[0m"
+    else
+        handle_error "Failed to create cloud backup"
+    fi
+}
+
 # WhatsAppTool Menu
 clear_screen_and_menu
 
@@ -283,3 +361,5 @@ while true; do
             echo -e "\e[91mInvalid choice. Please enter a number between 1 and 4.\e[0m" ;;
     esac
 done
+
+#nxtgencat
