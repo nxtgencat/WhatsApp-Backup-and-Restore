@@ -41,6 +41,6 @@ Follow the on-screen instructions in Termux to use WhatsAppTool for backup and r
 Feel free to contribute or report issues!
 
 Happy coding! 🚀
-```
+
 
 Feel free to customize the markdown further based on your preferences.
