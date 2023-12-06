@@ -9,6 +9,11 @@ nxtgen_log() {
     local log_file="$backup_directory/nxtgen.log"
     local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
 
+    # Check if log directory exists, create if not
+    if [ ! -d "$backup_directory" ]; then
+        mkdir -p "$backup_directory"
+    fi
+
     echo "[$timestamp] $log_message" >> "$log_file"
 }
 
@@ -124,7 +129,7 @@ backup_option() {
     create_directory_if_not_exists "$whatsapp_directory"
     remove_files_except "$whatsapp_directory"
     create_directory_if_not_exists "$backup_directory"
-    
+        echo -e "\e[92mPreparing to backup ....\e[0m"
     if is_directory_empty "$whatsapp_directory"; then
         nxtgen_log "WhatsApp directory is empty. No backup created."
         echo -e "\e[93mWhatsApp directory is empty. No backup created.\e[0m"
@@ -149,7 +154,7 @@ backup_option() {
 restore_option() {
     local latest_archive
     local whatsapp_backup_directory="$backup_directory" # Change this if your backup directory structure is different
-
+    echo -e "\e[92mPreparing to restore ....\e[0m"
     # Find the latest archive
     latest_archive=$(find "$whatsapp_backup_directory" -type f -name '*.tar.gz' | sort -V | tail -n 1)
 
