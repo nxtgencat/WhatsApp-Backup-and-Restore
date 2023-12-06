@@ -1,7 +1,6 @@
-
+WhatsAppTool
 
 ```markdown
-# WhatsAppTool
 
 🌟 **WhatsAppTool** - Backup, Restore, and Cloud Backup for WhatsApp databases, backups, and media hassle-free.
 
