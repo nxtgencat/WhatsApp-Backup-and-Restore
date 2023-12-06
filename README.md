@@ -16,6 +16,8 @@
 
 Make sure you have [Termux](https://termux.com/) installed on your Android device.
 
+```
+
 ```bash
 apt update && apt upgrade
 termux-setup-storage
