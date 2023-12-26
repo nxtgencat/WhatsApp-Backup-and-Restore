@@ -186,20 +186,27 @@ restore_option() {
 cloud_backup_option() {
     clear_screen_and_menu
 
-    echo "Select Cloud Backup Server:"
-    echo "1. Devupload"
-    echo "2. Gofile"
-    echo
+    local cloud_choice
+    
+    while true; do
+        echo "Select Cloud Backup Server:"
+        echo "1. Devupload"
+        echo "2. Gofile"
+        echo "3. Back"
+        echo
+        
+        read -p "Enter your choice (1, 2, or 3): " cloud_choice
 
-    read -p "Enter your choice (1 or 2): " cloud_choice
+        case $cloud_choice in
+            1)  devupload_cloud_backup_option ;;
+            2)  gofile_cloud_backup_option ;;
+            3)  return ;;  # Return to the main menu
+            *)  nxtgen_log "Invalid choice. Please enter 1, 2, or 3."
+                echo -e "\e[91mInvalid choice. Please enter 1, 2, or 3.\e[0m" ;;
+        esac
+    done
+}
 
-    case $cloud_choice in
-        1)  devupload_cloud_backup_option ;;
-        2)  gofile_cloud_backup_option ;;
-        *)  nxtgen_log "Invalid choice. Please enter 1 or 2."
-            echo -e "\e[91mInvalid choice. Please enter 1 or 2.\e[0m" ;;
-    esac
-}   
 
 devupload_cloud_backup_option() {
     url="https://devuploads.com/api/upload/server"
