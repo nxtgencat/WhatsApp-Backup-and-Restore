@@ -1,4 +1,4 @@
-# WhatsAppTool
+# WhatsAppBackupTool
 
 ### Features
 
