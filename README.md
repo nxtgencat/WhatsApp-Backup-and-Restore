@@ -1,14 +1,14 @@
-WhatsAppTool
+# WhatsAppTool
 
-🌟 **WhatsAppTool** - Backup, Restore, and Cloud Backup for WhatsApp databases, backups, and media hassle-free.
+## 🌟 **WhatsAppTool** - Backup, Restore, and Cloud Backup for WhatsApp databases, backups, and media hassle-free.
 
-## Features
+### Features
 
 - Backup and restore databases and media effortlessly.
 - Cloud backup with unlimited storage and high-speed support.
 
 
-# Prerequisites
+### Prerequisites
 
 ```bash
 apt update && apt upgrade
@@ -25,14 +25,3 @@ git clone https://github.com/nxtgencat/WhatsAppTool
 cd WhatsAppTool
 bash main.sh
 ```
-
-## How to Use
-
-Follow the on-screen instructions in Termux to use WhatsAppTool for backup and restore.
-
-Feel free to contribute or report issues!
-
-Happy coding! 🚀
-
-
-Feel free to customize the markdown further based on your preferences.
