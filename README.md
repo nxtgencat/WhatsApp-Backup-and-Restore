@@ -1,7 +1,5 @@
 # WhatsAppTool
 
-## 🌟 **WhatsAppTool** - Backup, Restore, and Cloud Backup for WhatsApp databases, backups, and media hassle-free.
-
 ### Features
 
 - Backup and restore databases and media effortlessly.
